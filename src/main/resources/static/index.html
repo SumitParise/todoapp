@@ -1,0 +1,132 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>To-Do App</title>
+    <style>
+        body { font-family: Arial, sans-serif; margin: 20px; text-align:center}
+        .todo { display: flex; justify-content: space-between; padding: 10px; margin: 5px 0; border: 1px solid #ccc; }
+        .section { margin-top: 20px; }
+        .section-header { font-size: 18px; font-weight: bold; }
+    </style>
+    <!-- Include Axios via CDN -->
+    <script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
+</head>
+<body>
+<h1>To-Do List</h1>
+<p id="currentDate"></p>
+<div>
+    <strong>Incomplete Tasks:</strong> <span id="incompleteCount">0</span> |
+    <strong>Complete Tasks:</strong> <span id="completeCount">0</span>
+</div>
+
+<input type="text" id="todoInput" placeholder="Add a new task">
+<button onclick="addTodo()">Add</button>
+
+<div class="section" id="incompleteSection">
+    <div class="section-header">Incomplete Tasks</div>
+    <div id="incompleteTasks"></div>
+</div>
+
+<div class="section" id="completeSection">
+    <div class="section-header">Completed Tasks</div>
+    <div id="completeTasks"></div>
+</div>
+
+<script>
+    const apiBase = '/api/todos';
+
+    // Display the current date
+    document.getElementById('currentDate').innerText = `Date: ${new Date().toLocaleDateString()}`;
+
+    // Fetch and display all To-Do items
+    async function fetchTodos() {
+        try {
+            const response = await axios.get(apiBase); // Use axios to fetch data
+            const todos = response.data; // Axios stores the data in `response.data`
+
+            // Separate tasks into incomplete and complete sections
+            const incompleteTasks = todos.filter(todo => !todo.completed);
+            const completeTasks = todos.filter(todo => todo.completed);
+
+            // Update incomplete task section
+            document.getElementById('incompleteTasks').innerHTML = incompleteTasks.map(todo =>
+                `<div class="todo">
+                    <input type="checkbox" onchange="toggleComplete(${todo.id}, this)" ${todo.completed ? 'checked' : ''}>
+                    <span>${todo.title}</span>
+                    <button onclick="deleteTodo(${todo.id})">Delete</button>
+                </div>`
+            ).join('');
+
+            // Update complete task section
+
+            document.getElementById('completeTasks').innerHTML = completeTasks.map(todo =>
+                `<div class="todo">
+                    <span>${todo.title}</span>
+                    <button onclick="deleteTodo(${todo.id})">Delete</button>
+                </div>`
+            ).join('');
+
+            // Update task counts
+            document.getElementById('incompleteCount').innerText = incompleteTasks.length;
+            document.getElementById('completeCount').innerText = completeTasks.length;
+
+        } catch (error) {
+            console.error("Error fetching todos:", error);
+            alert("Could not load todos. Please try again later.");
+        }
+    }
+
+    // Toggle the completed state of a task when checkbox is checked/unchecked
+
+    async function toggleComplete(id, checkbox) {
+        const completed = checkbox.checked;
+
+        try {
+            await axios.put(`${apiBase}/${id}`, { completed }); // Update the task status in the backend
+            fetchTodos(); // Refresh the todo list
+        } catch (error) {
+            console.error("Error updating todo:", error);
+            alert("Could not update todo. Please try again later.");
+        }
+    }
+
+    // Add a new To-Do item
+
+    async function addTodo() {
+        const title = document.getElementById('todoInput').value.trim();
+        if (!title) {
+            alert("Please enter a task.");
+            return;
+        }
+
+        try {
+            await axios.post(apiBase, title, {
+                headers: { 'Content-Type': 'application/json' }
+            }); // Use axios to send a POST request
+
+            document.getElementById('todoInput').value = ''; // Clear the input
+            fetchTodos(); // Refresh the todo list
+        } catch (error) {
+            console.error("Error adding todo:", error);
+            alert("Could not add todo. Please try again later.");
+        }
+    }
+
+    // Delete a To-Do item by ID
+    async function deleteTodo(id) {
+        try {
+            await axios.delete(`${apiBase}/${id}`); // Use axios to send a DELETE request
+            fetchTodos(); // Refresh the todo list
+        } catch (error) {
+            console.error("Error deleting todo:", error);
+            alert("Could not delete todo. Please try again later.");
+        }
+    }
+
+    // Initial load of To-Do items
+    fetchTodos();
+</script>
+</body>
+</html>
